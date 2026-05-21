@@ -2022,7 +2022,7 @@ describe('Sessions API', () => {
           branch: string | null
         } | null
       }
-      expect(body.branch).toBe('main')
+      expect(body.branch).toBe(repository!.worktreeBranch)
       expect(body.workDir).toBe(activeWorktree)
       expect(body.worktree).toEqual({
         enabled: true,
@@ -2067,7 +2067,7 @@ describe('Sessions API', () => {
         branch: string | null
       } | null
     }
-    expect(body.branch).toBe('main')
+    expect(body.branch).toBe('worktree-desktop-main-12345678')
     expect(body.workDir).toBe(activeWorktree)
     expect(body.worktree).toEqual({
       enabled: true,
@@ -2121,7 +2121,7 @@ describe('Sessions API', () => {
         branch: string | null
       } | null
     }
-    expect(body.branch).toBe('main')
+    expect(body.branch).toBe('worktree-desktop-main-12345678')
     expect(body.worktree).toMatchObject({
       path: activeWorktree,
       plannedPath: activeWorktree,
