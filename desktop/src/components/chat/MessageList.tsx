@@ -447,11 +447,12 @@ function appendChildToolCall(
   }
 }
 
-export function buildRenderModel(messages: UIMessage[]): RenderModel {
+export function buildRenderModel(messages: UIMessage[], activeAskUserQuestionToolUseId?: string | null): RenderModel {
   const items: RenderItem[] = []
   const toolResultMap = new Map<string, ToolResult>()
   const childToolCallsByParent = new Map<string, ToolCall[]>()
   const toolUseIds = new Set<string>()
+  const lastUnresolvedAskUserQuestionIndexByToolUseId = new Map<string, number>()
   let pendingToolCalls: ToolCall[] = []
 
   const flushGroup = () => {
@@ -482,6 +483,15 @@ export function buildRenderModel(messages: UIMessage[]): RenderModel {
       toolResultMap.set(msg.toolUseId, msg)
     }
   }
+  messages.forEach((msg, index) => {
+    if (
+      msg.type === 'tool_use' &&
+      msg.toolName === 'AskUserQuestion' &&
+      !toolResultMap.has(msg.toolUseId)
+    ) {
+      lastUnresolvedAskUserQuestionIndexByToolUseId.set(msg.toolUseId, index)
+    }
+  })
 
   for (const msg of messages) {
     if (msg.type === 'assistant_text' && !msg.content.trim()) {
@@ -505,6 +515,18 @@ export function buildRenderModel(messages: UIMessage[]): RenderModel {
         continue
       }
       if (msg.toolName === 'AskUserQuestion') {
+        const isResolved = toolResultMap.has(msg.toolUseId)
+        const lastUnresolvedIndex = lastUnresolvedAskUserQuestionIndexByToolUseId.get(msg.toolUseId)
+        if (!isResolved && lastUnresolvedIndex !== undefined && messages[lastUnresolvedIndex] !== msg) {
+          continue
+        }
+        if (
+          !isResolved &&
+          activeAskUserQuestionToolUseId &&
+          msg.toolUseId !== activeAskUserQuestionToolUseId
+        ) {
+          continue
+        }
         flushGroup()
         items.push({ kind: 'message', message: msg })
       } else {
@@ -822,6 +844,10 @@ export function MessageList({ sessionId, compact = false }: MessageListProps = {
   const streamingText = sessionState?.streamingText ?? ''
   const activeThinkingId = sessionState?.activeThinkingId ?? null
   const agentTaskNotifications = sessionState?.agentTaskNotifications ?? {}
+  const activeAskUserQuestionToolUseId =
+    sessionState?.pendingPermission?.toolName === 'AskUserQuestion'
+      ? sessionState.pendingPermission.toolUseId
+      : null
   const shouldFollowContentResize =
     streamingText.trim().length > 0 ||
     chatState === 'streaming' ||
@@ -975,8 +1001,8 @@ export function MessageList({ sessionId, compact = false }: MessageListProps = {
   }, [scrollToBottom, shouldFollowContentResize])
 
   const { toolResultMap, childToolCallsByParent, renderItems } = useMemo(
-    () => buildRenderModel(messages),
-    [messages],
+    () => buildRenderModel(messages, activeAskUserQuestionToolUseId),
+    [activeAskUserQuestionToolUseId, messages],
   )
   const branchableMessageTargets = useMemo(
     () => branchActionsDisabled ? new Map<string, BranchableMessageTarget>() : getBranchableMessageTargets(messages),

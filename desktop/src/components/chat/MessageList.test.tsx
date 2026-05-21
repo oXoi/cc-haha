@@ -153,6 +153,104 @@ describe('MessageList nested tool calls', () => {
     expect(container.querySelector('[data-virtual-message-item]')).toBeNull()
   })
 
+  it('filters duplicate unresolved AskUserQuestion cards while a matching permission is pending', () => {
+    const messages: UIMessage[] = [
+      {
+        id: 'stale-ask',
+        type: 'tool_use',
+        toolName: 'AskUserQuestion',
+        toolUseId: 'stale-tool',
+        input: {
+          questions: [
+            {
+              question: 'Restore this context?',
+              options: [{ label: 'No' }, { label: 'Yes' }],
+            },
+          ],
+        },
+        timestamp: 1,
+      },
+      {
+        id: 'active-ask',
+        type: 'tool_use',
+        toolName: 'AskUserQuestion',
+        toolUseId: 'active-tool',
+        input: {
+          questions: [
+            {
+              question: 'Restore this context?',
+              options: [{ label: 'No' }, { label: 'Yes' }],
+            },
+          ],
+        },
+        timestamp: 2,
+      },
+    ]
+
+    const { renderItems } = buildRenderModel(messages, 'active-tool')
+
+    expect(renderItems).toHaveLength(1)
+    expect(renderItems[0]).toMatchObject({
+      kind: 'message',
+      message: {
+        type: 'tool_use',
+        toolName: 'AskUserQuestion',
+        toolUseId: 'active-tool',
+      },
+    })
+  })
+
+  it('keeps resolved AskUserQuestion history visible when filtering active duplicates', () => {
+    const messages: UIMessage[] = [
+      {
+        id: 'answered-ask',
+        type: 'tool_use',
+        toolName: 'AskUserQuestion',
+        toolUseId: 'answered-tool',
+        input: {
+          questions: [
+            {
+              question: 'Already answered?',
+              options: [{ label: 'No' }, { label: 'Yes' }],
+            },
+          ],
+        },
+        timestamp: 1,
+      },
+      {
+        id: 'answered-result',
+        type: 'tool_result',
+        toolUseId: 'answered-tool',
+        content: { answers: { 'Already answered?': 'Yes' } },
+        isError: false,
+        timestamp: 2,
+      },
+      {
+        id: 'active-ask',
+        type: 'tool_use',
+        toolName: 'AskUserQuestion',
+        toolUseId: 'active-tool',
+        input: {
+          questions: [
+            {
+              question: 'Restore this context?',
+              options: [{ label: 'No' }, { label: 'Yes' }],
+            },
+          ],
+        },
+        timestamp: 3,
+      },
+    ]
+
+    const { renderItems } = buildRenderModel(messages, 'active-tool')
+
+    expect(renderItems).toHaveLength(2)
+    expect(renderItems.map((item) => item.kind === 'message' && item.message.type === 'tool_use'
+      ? item.message.toolUseId
+      : null,
+    )).toEqual(['answered-tool', 'active-tool'])
+  })
+
   it('renders goal events as visible status cards', () => {
     useChatStore.setState({
       sessions: {

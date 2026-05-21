@@ -320,18 +320,22 @@ export function AskUserQuestion({ sessionId, toolUseId, input, result }: Props) 
             <label className="text-xs text-[var(--color-text-tertiary)] mb-1.5 block">
               {t('question.customResponse')}
             </label>
-            <input
-              type="text"
+            <textarea
               value={freeTexts[safeActiveTab] ?? ''}
               onChange={(e) => handleFreeTextChange(safeActiveTab, e.target.value)}
               onCompositionStart={() => { composingRef.current = true }}
               onCompositionEnd={() => { composingRef.current = false }}
               onKeyDown={(e) => {
                 if (composingRef.current || e.nativeEvent.isComposing || e.keyCode === 229) return
-                if (e.key === 'Enter' && allAnswered) handleSubmit()
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && allAnswered) {
+                  e.preventDefault()
+                  handleSubmit()
+                }
               }}
               placeholder={t('question.typePlaceholder')}
-              className="w-full px-3 py-2 text-sm bg-[var(--color-surface)] border border-[var(--color-outline-variant)]/40 rounded-[var(--radius-md)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:border-[var(--color-secondary)] focus:ring-1 focus:ring-[var(--color-secondary)]/30"
+              rows={3}
+              wrap="soft"
+              className="max-h-48 min-h-[84px] w-full resize-y rounded-[var(--radius-md)] border border-[var(--color-outline-variant)]/40 bg-[var(--color-surface)] px-3 py-2 text-sm leading-relaxed text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-secondary)]/30"
             />
           </div>
         )}
