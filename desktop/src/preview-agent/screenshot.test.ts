@@ -59,7 +59,7 @@ describe('captureToDataUrl', () => {
 })
 
 describe('captureAnnotatedRegion', () => {
-  it('calls html2canvas with document.body and scale:1', async () => {
+  it('captures the visible viewport with scale:1', async () => {
     const ctx = makeMockCtx()
     html2canvasMock.mockResolvedValue({
       getContext: () => ctx as unknown as CanvasRenderingContext2D,
@@ -76,7 +76,11 @@ describe('captureAnnotatedRegion', () => {
 
     await captureAnnotatedRegion(el, 1)
 
-    expect(html2canvasMock).toHaveBeenCalledWith(document.body, expect.objectContaining({ scale: 1 }))
+    expect(html2canvasMock).toHaveBeenCalledWith(document.documentElement, expect.objectContaining({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      scale: 1,
+    }))
   })
 
   it('draws the annotation on the captured canvas (stroke and fillText called)', async () => {
@@ -98,6 +102,44 @@ describe('captureAnnotatedRegion', () => {
 
     expect(ctx.stroke).toHaveBeenCalled()
     expect(ctx.fillText).toHaveBeenCalled()
+  })
+
+  it('draws the selected element at viewport coordinates in the captured viewport', async () => {
+    const ctx = makeMockCtx()
+    html2canvasMock.mockResolvedValue({
+      getContext: () => ctx as unknown as CanvasRenderingContext2D,
+      toDataURL: () => 'data:image/png;base64,RAW',
+      width: window.innerWidth,
+      height: window.innerHeight,
+    })
+    const el = document.createElement('input')
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 50, width: 80, height: 40,
+      right: 180, bottom: 90, x: 100, y: 50,
+      toJSON: () => ({}),
+    } as DOMRect)
+    vi.spyOn(document.body, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: -200, width: 1000, height: 2000,
+      right: 1000, bottom: 1800, x: 0, y: -200,
+      toJSON: () => ({}),
+    } as DOMRect)
+
+    await captureAnnotatedRegion(el, 1)
+
+    const options = html2canvasMock.mock.calls[0]?.[1] as Record<string, unknown>
+    expect(html2canvasMock.mock.calls[0]?.[0]).toBe(document.documentElement)
+    expect(options).toMatchObject({
+      x: window.scrollX,
+      y: window.scrollY,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      scale: 1,
+    })
+    const badgeCall = ctx.arc.mock.calls[0]
+    expect(badgeCall?.[0]).toBe(140)
+    expect(badgeCall?.[1]).toBe(50)
   })
 
   it('returns the compressed wrapper of the canvas dataURL', async () => {

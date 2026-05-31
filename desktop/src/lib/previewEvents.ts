@@ -1,7 +1,7 @@
 import { listen } from '@tauri-apps/api/event'
 import { useBrowserPanelStore } from '../stores/browserPanelStore'
 import { useChatStore } from '../stores/chatStore'
-import { buildSelectionComposerText, type SelectionPayload } from './selectionComposer'
+import { buildSelectionDirectMessage, type SelectionPayload } from './selectionComposer'
 
 function kindLabel(kind?: string): string {
   if (kind === 'viewport') return 'viewport'
@@ -27,11 +27,21 @@ export async function subscribePreviewEvents(sessionId: string): Promise<() => v
       store.setPicker(sessionId, false)
       const p = msg.payload as (SelectionPayload & { screenshot?: { dataUrl?: string; kind?: string } }) | undefined
       if (!p || typeof p !== 'object' || !p.element) return
-      useChatStore.getState().queueComposerPrefill(sessionId, {
-        text: buildSelectionComposerText(p),
-        attachments: p.screenshot?.dataUrl
-          ? [{ type: 'image', name: 'selection.png', mimeType: 'image/png', data: p.screenshot.dataUrl }]
-          : [],
+      const selection = buildSelectionDirectMessage(p)
+      const attachments = p.screenshot?.dataUrl
+        ? [{
+            type: 'image' as const,
+            name: selection.displayName,
+            mimeType: 'image/png',
+            data: p.screenshot.dataUrl,
+            note: selection.note,
+            quote: p.element.selector,
+          }]
+        : []
+      useChatStore.getState().sendMessage(sessionId, selection.modelText, attachments, {
+        displayContent: selection.displayName,
+        displayAttachments: attachments,
+        hideDisplayContent: attachments.length > 0,
       })
     }
     else if (msg.type === 'picker-exited') {

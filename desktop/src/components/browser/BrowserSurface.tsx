@@ -102,10 +102,11 @@ export function BrowserSurface({ sessionId }: { sessionId: string }) {
           previewBridge.navigate(session.url)
         }}
       />
-      <div className="flex items-center gap-1 border-b px-2 py-1">
+      <div className="flex h-10 items-center gap-1 border-b border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] px-2">
         <button
           aria-label="截图"
-          className="rounded p-1 hover:bg-muted"
+          title="截图"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-surface-container-low)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]"
           onClick={() => previewBridge.eval(`window.__PREVIEW_BRIDGE__?.handleHostRaw('{"v":1,"type":"capture","kind":"full"}')`)}
         >
           <Camera size={16} />
@@ -113,7 +114,13 @@ export function BrowserSurface({ sessionId }: { sessionId: string }) {
         <button
           aria-label="选择元素"
           aria-pressed={Boolean(session.pickerActive)}
-          className={`rounded p-1 hover:bg-muted ${session.pickerActive ? 'bg-muted text-primary' : ''}`}
+          title="选择元素"
+          className={[
+            'inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]',
+            session.pickerActive
+              ? 'border-[var(--color-brand)]/45 bg-[var(--color-surface-selected)] text-[var(--color-brand)]'
+              : 'border-transparent text-[var(--color-text-secondary)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface-container-low)] hover:text-[var(--color-text-primary)]',
+          ].join(' ')}
           onClick={() => {
             const cur = useBrowserPanelStore.getState().bySession[sessionId]
             const next = !cur?.pickerActive

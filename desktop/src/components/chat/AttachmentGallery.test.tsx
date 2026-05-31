@@ -64,4 +64,25 @@ describe('AttachmentGallery', () => {
 
     expect(onRemove).toHaveBeenCalledWith('selection-1')
   })
+
+  it('shows a compact element chip for annotated selection images and exposes the note on hover', () => {
+    const view = render(
+      <AttachmentGallery
+        variant="message"
+        attachments={[{
+          id: 'preview-selection',
+          type: 'image',
+          name: '<h1>',
+          data: 'data:image/png;base64,AAAA',
+          note: '这个标题更轻一点',
+        }]}
+      />,
+    )
+
+    expect(view.getByRole('button', { name: 'Open <h1>' })).toBeTruthy()
+    const noteChip = view.getByLabelText('Selection note: 这个标题更轻一点')
+    expect(noteChip.textContent).toContain('<h1>')
+    expect(noteChip.getAttribute('title')).toBe('这个标题更轻一点')
+    expect(document.body.textContent).not.toContain('这个标题更轻一点')
+  })
 })

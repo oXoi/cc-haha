@@ -134,7 +134,7 @@ type ChatStore = {
     sessionId: string,
     content: string,
     attachments?: AttachmentRef[],
-    options?: { displayContent?: string; displayAttachments?: AttachmentRef[] },
+    options?: { displayContent?: string; displayAttachments?: AttachmentRef[]; hideDisplayContent?: boolean },
   ) => void
   respondToPermission: (
     sessionId: string,
@@ -878,10 +878,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   sendMessage: (sessionId, content, attachments, options) => {
-    const userFacingContent =
-      options?.displayContent?.trim() || content.trim()
-    const modelFacingContent = buildModelContent(content, attachments)
     const isMemberSession = !!useTeamStore.getState().getMemberBySessionId(sessionId)
+    const hideDisplayContent = !isMemberSession && options?.hideDisplayContent === true
+    const userFacingContent =
+      hideDisplayContent
+        ? ''
+        : options?.displayContent?.trim() || content.trim()
+    const modelFacingContent = buildModelContent(content, attachments)
     const visibleAttachments = options?.displayAttachments ?? attachments
     const uiAttachments: UIAttachment[] | undefined =
       visibleAttachments && visibleAttachments.length > 0
@@ -910,7 +913,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     if (!isMemberSession) {
-      updateOptimisticSessionTitle(sessionId, userFacingContent)
+      updateOptimisticSessionTitle(sessionId, userFacingContent || content.trim())
     }
 
     set((s) => {

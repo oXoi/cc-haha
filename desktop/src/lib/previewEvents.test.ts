@@ -1,17 +1,32 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const listeners: Record<string, (e: { payload: string }) => void> = {}
 vi.mock('@tauri-apps/api/event', () => ({
   listen: (name: string, cb: (e: { payload: string }) => void) => { listeners[name] = cb; return Promise.resolve(() => {}) },
 }))
 
-const prefill = vi.hoisted(() => vi.fn())
-vi.mock('../stores/chatStore', () => ({ useChatStore: { getState: () => ({ queueComposerPrefill: prefill }) } }))
+const { prefill, sendMessage } = vi.hoisted(() => ({
+  prefill: vi.fn(),
+  sendMessage: vi.fn(),
+}))
+vi.mock('../stores/chatStore', () => ({
+  useChatStore: {
+    getState: () => ({
+      queueComposerPrefill: prefill,
+      sendMessage,
+    }),
+  },
+}))
 
 import { subscribePreviewEvents } from './previewEvents'
 import { useBrowserPanelStore } from '../stores/browserPanelStore'
 
 describe('subscribePreviewEvents', () => {
+  beforeEach(() => {
+    prefill.mockClear()
+    sendMessage.mockClear()
+  })
+
   it('routes navigated event to the store', async () => {
     useBrowserPanelStore.getState().open('s1', 'http://x/a')
     await subscribePreviewEvents('s1')
@@ -27,14 +42,25 @@ describe('subscribePreviewEvents', () => {
     }))
   })
 
-  it('selection event prefills composer with text + annotated screenshot', async () => {
+  it('selection event sends a chat turn directly with hidden prompt text + annotated screenshot', async () => {
     await subscribePreviewEvents('s1')
     const payload = { pageUrl: 'http://x/', element: { selector: '#t', tag: 'h1', classes: [] }, change: { description: '改一下' }, screenshot: { dataUrl: 'data:image/png;base64,AAAA', kind: 'element' } }
     listeners['preview://event']!({ payload: JSON.stringify({ v: 1, type: 'selection', payload }) })
-    expect(prefill).toHaveBeenCalledWith('s1', expect.objectContaining({
-      text: expect.stringContaining('改一下'),
-      attachments: [expect.objectContaining({ type: 'image', data: 'data:image/png;base64,AAAA' })],
-    }))
+    expect(prefill).not.toHaveBeenCalled()
+    expect(sendMessage).toHaveBeenCalledWith(
+      's1',
+      expect.stringContaining('改一下'),
+      [expect.objectContaining({
+        type: 'image',
+        name: '<h1>',
+        data: 'data:image/png;base64,AAAA',
+        note: '改一下',
+      })],
+      expect.objectContaining({
+        hideDisplayContent: true,
+        displayAttachments: [expect.objectContaining({ name: '<h1>', note: '改一下' })],
+      }),
+    )
   })
 
   it('selection event resets pickerActive on the session', async () => {
