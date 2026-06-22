@@ -164,26 +164,45 @@ export function preferredServerPorts(env: NodeJS.ProcessEnv = process.env): numb
 
 export async function waitForServer(host: string, port: number, timeoutMs = 10_000): Promise<void> {
   const deadline = Date.now() + timeoutMs
+  const healthUrl = `http://${host}:${port}/health`
+  let lastError: Error | null = null
+
   while (Date.now() < deadline) {
-    if (await canConnect(host, port)) return
+    try {
+      await assertServerHealth(healthUrl, Math.min(500, Math.max(100, deadline - Date.now())))
+      return
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+    }
     await sleep(150)
   }
-  throw new Error(`desktop server did not start listening on ${host}:${port} within ${Math.round(timeoutMs / 1000)} seconds`)
+
+  const reason = lastError ? `: ${lastError.message}` : ''
+  throw new Error(`desktop server did not report healthy at ${healthUrl} within ${Math.round(timeoutMs / 1000)} seconds${reason}`)
 }
 
-function canConnect(host: string, port: number): Promise<boolean> {
-  return new Promise(resolve => {
-    const socket = net.connect({ host, port, timeout: 200 })
-    socket.once('connect', () => {
-      socket.destroy()
-      resolve(true)
+async function assertServerHealth(healthUrl: string, timeoutMs: number): Promise<void> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetch(healthUrl, {
+      cache: 'no-store',
+      signal: controller.signal,
     })
-    socket.once('timeout', () => {
-      socket.destroy()
-      resolve(false)
-    })
-    socket.once('error', () => resolve(false))
-  })
+    if (!response.ok) throw new Error(`healthcheck returned ${response.status}`)
+
+    const contentType = response.headers.get('content-type') ?? ''
+    if (!contentType.toLowerCase().includes('application/json')) {
+      throw new Error(`healthcheck returned non-JSON response from ${healthUrl}`)
+    }
+
+    const body = await response.json().catch(() => null)
+    if (!body || typeof body !== 'object' || !('status' in body) || body.status !== 'ok') {
+      throw new Error(`healthcheck returned invalid response from ${healthUrl}`)
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 function sleep(ms: number): Promise<void> {

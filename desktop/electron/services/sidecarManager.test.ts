@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import net from 'node:net'
+import http from 'node:http'
 import path from 'node:path'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -20,6 +21,7 @@ import {
   reserveServerPort,
   resolveHostTriple,
   spawnSidecar,
+  waitForServer,
   windowsPowerShellOverride,
   writeLastServerPort,
   type SidecarChild,
@@ -27,6 +29,24 @@ import {
 
 function fakeChild(pid = 4321) {
   return { pid, kill: vi.fn() } as unknown as SidecarChild & { kill: ReturnType<typeof vi.fn> }
+}
+
+function listen(server: http.Server, host = '127.0.0.1'): Promise<number> {
+  return new Promise((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, host, () => {
+      const address = server.address()
+      if (!address || typeof address === 'string') {
+        reject(new Error('Could not resolve HTTP test port'))
+        return
+      }
+      resolve(address.port)
+    })
+  })
+}
+
+function close(server: http.Server): Promise<void> {
+  return new Promise(resolve => server.close(() => resolve()))
 }
 
 describe('Electron sidecar manager', () => {
@@ -261,5 +281,21 @@ describe('Electron sidecar manager', () => {
 
     // Invalid entries are skipped without throwing.
     await expect(reserveServerPort('127.0.0.1', [0, -1, 1.5, 70000])).resolves.toBeGreaterThan(0)
+  })
+
+  it('does not treat a raw TCP accept as server readiness without healthy /health', async () => {
+    const server = http.createServer((_request, response) => {
+      response.writeHead(503, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ status: 'starting' }))
+    })
+    const port = await listen(server)
+
+    try {
+      await expect(waitForServer('127.0.0.1', port, 300)).rejects.toThrow(
+        /desktop server did not report healthy at http:\/\/127\.0\.0\.1:\d+\/health/,
+      )
+    } finally {
+      await close(server)
+    }
   })
 })

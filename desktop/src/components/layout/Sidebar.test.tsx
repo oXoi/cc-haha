@@ -322,6 +322,19 @@ describe('Sidebar', () => {
     await waitFor(() => expect(fetchSessions).toHaveBeenCalled())
   })
 
+  it('exposes the full session title as a row tooltip when the label is truncated', () => {
+    const longTitle = '这是一个非常非常长的会话标题，用来验证侧边栏截断后仍然可以通过气泡查看完整内容'
+    useSessionStore.setState({
+      sessions: [
+        makeSession('session-long-title', longTitle, '/workspace/alpha', '2026-05-15T10:00:00.000Z'),
+      ],
+    })
+
+    render(<Sidebar />)
+
+    expect(screen.getByRole('button', { name: new RegExp(longTitle) })).toHaveAttribute('title', longTitle)
+  })
+
   it('reorders project groups by dragging project headers while preserving expanded state', async () => {
     const base = new Date('2026-05-15T10:00:00.000Z').getTime()
     useSessionStore.setState({

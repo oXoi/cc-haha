@@ -975,6 +975,7 @@ export function Sidebar({ isMobile = false, onRequestClose }: SidebarProps) {
                                     }
                                   `}
                                   aria-pressed={isBatchMode ? selectedSessionIds.has(session.id) : undefined}
+                                  title={session.title || 'Untitled'}
                                 >
                                   <span className="flex min-w-0 items-center gap-2">
                                     {isBatchMode ? (

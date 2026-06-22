@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import '@testing-library/jest-dom'
 import { act } from 'react'
 
@@ -206,6 +206,10 @@ describe('ChatInput file mentions', () => {
     mocks.getMessages.mockResolvedValue({ messages: [] })
     mocks.getSlashCommands.mockResolvedValue({ commands: [] })
     mocks.listAgents.mockResolvedValue({ activeAgents: [], allAgents: [] })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('keeps unsent composer drafts isolated when switching between session tabs', async () => {
@@ -1155,6 +1159,57 @@ describe('ChatInput file mentions', () => {
           data: undefined,
         }),
       ],
+    })
+  })
+
+  it('ignores pasted images that finish loading after the prompt was sent', async () => {
+    class DeferredFileReader {
+      result: string | ArrayBuffer | null = null
+      onload: ((event: ProgressEvent<FileReader>) => void) | null = null
+
+      readAsDataURL(file: Blob) {
+        pendingReaders.push({ reader: this, file })
+      }
+    }
+    const pendingReaders: Array<{ reader: DeferredFileReader; file: Blob }> = []
+    vi.stubGlobal('FileReader', DeferredFileReader)
+
+    render(<ChatInput compact />)
+
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement
+    const file = new File(['image'], 'late.png', { type: 'image/png' })
+
+    fireEvent.paste(input, {
+      clipboardData: {
+        items: [{
+          type: 'image/png',
+          getAsFile: () => file,
+        }],
+      },
+    })
+    expect(pendingReaders).toHaveLength(1)
+
+    fireEvent.change(input, {
+      target: {
+        value: 'send now',
+        selectionStart: 'send now'.length,
+      },
+    })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(mocks.wsSend).toHaveBeenCalledWith(sessionId, {
+      type: 'user_message',
+      content: 'send now',
+      attachments: [],
+    })
+
+    act(() => {
+      pendingReaders[0]!.reader.result = 'data:image/png;base64,LATE'
+      pendingReaders[0]!.reader.onload?.({} as ProgressEvent<FileReader>)
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByAltText(/pasted-image-/)).not.toBeInTheDocument()
     })
   })
 

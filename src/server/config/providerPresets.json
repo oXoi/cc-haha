@@ -60,6 +60,7 @@
       "CC_HAHA_SEND_DISABLED_THINKING": "1"
     },
     "modelContextWindows": {
+      "glm-5.2": 200000,
       "glm-5.1": 200000,
       "glm-5-turbo": 200000,
       "glm-4.5-air": 128000
