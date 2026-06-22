@@ -690,6 +690,8 @@ export class CronScheduler {
     return [
       ...(model ? ['--model', model] : []),
       '--dangerously-skip-permissions',
+      '--permission-mode',
+      'bypassPermissions',
     ]
   }
 

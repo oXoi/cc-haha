@@ -474,7 +474,10 @@ describe('cron scheduler launcher resolution', () => {
       .trim()
       .split('\n')
     expect(sidecarArgs).toContain('--dangerously-skip-permissions')
-    expect(sidecarArgs).not.toContain('--permission-mode')
+    expect(sidecarArgs).toContain('--permission-mode')
+    expect(sidecarArgs[sidecarArgs.indexOf('--permission-mode') + 1]).toBe(
+      'bypassPermissions',
+    )
   })
 
   unixOnly('executeTask inherits exported terminal shell variables', async () => {
