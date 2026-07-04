@@ -1082,6 +1082,13 @@ button, input, textarea, select, a, [role="button"] {
   -webkit-backdrop-filter: blur(1.5px);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .skill-market-detail-scrim {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 .sidebar-shell {
   width: var(--sidebar-width);
   flex-shrink: 0;

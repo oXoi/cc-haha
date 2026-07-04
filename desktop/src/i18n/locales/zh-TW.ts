@@ -2088,6 +2088,7 @@ export const zh: Record<TranslationKey, string> = {
   'skillCenter.marketplace.drawer.metadata': '中繼資料',
   'skillCenter.marketplace.drawer.links': '連結',
   'skillCenter.marketplace.loadingCard': '正在載入市場技能',
+  'skillCenter.marketplace.loadingDetail': '正在載入技能詳情',
   'skillCenter.marketplace.previewTruncated': '已截斷',
   'skillCenter.marketplace.previewUnavailable': '暫時無法預覽',
   'skillCenter.marketplace.previewUnavailable.skillhub': 'SkillHub 目前尚未提供安全的原始檔案預覽介面。',

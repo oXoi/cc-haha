@@ -245,8 +245,34 @@ describe('SkillCenter', () => {
 
     render(<SkillCenter />)
 
-    expect(screen.getByTestId('skill-marketplace-loading')).toBeInTheDocument()
+    const loadingRegion = screen.getByTestId('skill-marketplace-loading')
+    expect(loadingRegion).toBeInTheDocument()
+    expect(loadingRegion).toHaveAttribute('role', 'status')
+    expect(loadingRegion).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('status', { name: 'Loading marketplace skills' })).toBe(loadingRegion)
     expect(screen.getAllByTestId('skill-card-skeleton')).toHaveLength(8)
+  })
+
+  it('keeps the detail drawer in the body modal layer for uniform theme masking', async () => {
+    render(<SkillCenter />)
+    fireEvent.click(await screen.findByRole('button', { name: 'PPT Generator' }))
+
+    const detailLayer = await screen.findByTestId('skill-market-detail-layer')
+    expect(detailLayer.parentElement).toBe(document.body)
+    expect(detailLayer).toHaveClass('fixed', 'inset-0', 'z-50')
+    expect(detailLayer.querySelector('.skill-market-detail-scrim')).not.toBeNull()
+  })
+
+  it('announces detail drawer skeleton loading without visible copy', async () => {
+    mockedSkillMarketApi.detail.mockReturnValue(new Promise(() => {}))
+
+    render(<SkillCenter />)
+    fireEvent.click(await screen.findByRole('button', { name: 'PPT Generator' }))
+
+    const detailLayer = screen.getByTestId('skill-market-detail-layer')
+    const detailLoading = within(detailLayer).getByRole('status', { name: 'Loading skill detail' })
+    expect(detailLoading).toHaveAttribute('aria-busy', 'true')
+    expect(within(detailLoading).getByText('Loading skill detail')).toHaveClass('sr-only')
   })
 
   it('places install decision, blocking reason, and file preview in the drawer decision area', async () => {
@@ -267,6 +293,7 @@ describe('SkillCenter', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'PPT Generator' }))
 
     const dialog = await screen.findByRole('dialog', { name: 'PPT Generator' })
+    expect(within(dialog).getByRole('heading', { name: 'Install decision' })).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Blocked' })).toBeDisabled()
     expect(within(dialog).getByText(/full package safety scan/i)).toBeInTheDocument()
     expect(within(dialog).getByText('File preview')).toBeInTheDocument()

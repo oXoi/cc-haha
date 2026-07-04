@@ -2088,6 +2088,7 @@ export const jp: Record<TranslationKey, string> = {
   'skillCenter.marketplace.drawer.metadata': 'メタデータ',
   'skillCenter.marketplace.drawer.links': 'リンク',
   'skillCenter.marketplace.loadingCard': 'マーケットスキルを読み込み中',
+  'skillCenter.marketplace.loadingDetail': 'スキル詳細を読み込み中',
   'skillCenter.marketplace.previewTruncated': '切り詰め済み',
   'skillCenter.marketplace.previewUnavailable': 'プレビュー不可',
   'skillCenter.marketplace.previewUnavailable.skillhub': 'SkillHub はまだ安全な raw ファイルプレビュー API を提供していません。',

@@ -787,7 +787,13 @@ function SkillMarketDetailPanel({
           </button>
         </div>
 
-        <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+        <div
+          aria-labelledby="skill-market-detail-decision-title"
+          className="border-b border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+        >
+          <h4 id="skill-market-detail-decision-title" className="sr-only">
+            {t('skillCenter.marketplace.drawer.decision')}
+          </h4>
           <button
             type="button"
             onClick={() => (canOpenInstalled ? onOpenInstalled(detail) : onInstall())}
@@ -1097,6 +1103,8 @@ function MarketplaceSkeletonGrid() {
   return (
     <div
       data-testid="skill-marketplace-loading"
+      role="status"
+      aria-busy="true"
       aria-label={t('skillCenter.marketplace.loadingCard')}
       className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
     >
@@ -1120,8 +1128,16 @@ function MarketplaceSkeletonGrid() {
 }
 
 function DetailDrawerSkeleton() {
+  const t = useTranslation()
+
   return (
-    <div className="flex h-full flex-col">
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label={t('skillCenter.marketplace.loadingDetail')}
+      className="flex h-full flex-col"
+    >
+      <span className="sr-only">{t('skillCenter.marketplace.loadingDetail')}</span>
       <div className="border-b border-[var(--color-border)] px-5 py-4">
         <div className="h-5 w-28 animate-pulse rounded bg-[var(--color-surface-container-high)]" />
         <div className="mt-3 h-6 w-2/3 animate-pulse rounded bg-[var(--color-surface-container-high)]" />

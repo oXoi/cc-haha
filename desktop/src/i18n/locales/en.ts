@@ -2086,6 +2086,7 @@ export const en = {
   'skillCenter.marketplace.drawer.metadata': 'Metadata',
   'skillCenter.marketplace.drawer.links': 'Links',
   'skillCenter.marketplace.loadingCard': 'Loading marketplace skills',
+  'skillCenter.marketplace.loadingDetail': 'Loading skill detail',
   'skillCenter.marketplace.previewTruncated': 'Truncated',
   'skillCenter.marketplace.previewUnavailable': 'Preview unavailable',
   'skillCenter.marketplace.previewUnavailable.skillhub': 'SkillHub does not expose a safe raw file preview endpoint yet.',

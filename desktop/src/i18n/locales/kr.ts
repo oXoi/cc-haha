@@ -2088,6 +2088,7 @@ export const kr: Record<TranslationKey, string> = {
   'skillCenter.marketplace.drawer.metadata': '메타데이터',
   'skillCenter.marketplace.drawer.links': '링크',
   'skillCenter.marketplace.loadingCard': '마켓 스킬 로드 중',
+  'skillCenter.marketplace.loadingDetail': '스킬 상세 로드 중',
   'skillCenter.marketplace.previewTruncated': '잘림',
   'skillCenter.marketplace.previewUnavailable': '미리보기 불가',
   'skillCenter.marketplace.previewUnavailable.skillhub': 'SkillHub는 아직 안전한 원본 파일 미리보기 API를 제공하지 않습니다.',
