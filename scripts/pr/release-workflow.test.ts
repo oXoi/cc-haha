@@ -556,6 +556,8 @@ describe('release desktop workflow', () => {
     }
 
     expect(installerSmoke).toContain('Invoke-CheckedProcess')
+    expect(installerSmoke).toContain('Invoke-LegacyRecoveryDiagnostic')
+    expect(installerSmoke).toContain('Direct legacy recovery diagnostic completed successfully')
     expect(installerSmoke).toContain("@('/S', '/currentuser'")
     expect(installerSmoke).toContain("@('--updated', '/S', '/currentuser'")
     expect(installerSmoke).toContain('$process.WaitForExit($TimeoutSeconds * 1000)')

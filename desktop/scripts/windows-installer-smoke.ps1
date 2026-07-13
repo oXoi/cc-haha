@@ -26,6 +26,7 @@ $localAppData = Join-Path $testRoot 'AppData\Local'
 $userProfile = Join-Path $testRoot 'UserProfile'
 $appExe = Join-Path $installDir 'Claude Code Haha.exe'
 $uninstaller = Join-Path $installDir 'Uninstall Claude Code Haha.exe'
+$recoveryHelper = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\build\recover-legacy-install-data.ps1')).Path
 
 $savedEnvironment = @{}
 foreach ($name in @('APPDATA', 'LOCALAPPDATA', 'USERPROFILE', 'CLAUDE_CONFIG_DIR', 'CC_HAHA_APP_PORTABLE_DIR')) {
@@ -56,6 +57,42 @@ function Invoke-CheckedProcess {
   }
 }
 
+function Invoke-LegacyRecoveryDiagnostic {
+  $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+  $arguments = @(
+    '-NoLogo',
+    '-NoProfile',
+    '-NonInteractive',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-File',
+    $recoveryHelper,
+    '-PerUserInstallDir',
+    $installDir,
+    '-CandidateInstallDir',
+    $installDir,
+    '-UserDataDir',
+    (Join-Path $appData 'Claude Code Haha'),
+    '-RecoveryRoot',
+    (Join-Path $userProfile 'Claude Code Haha Data\Recovered'),
+    '-ProcessName',
+    'Claude Code Haha.exe',
+    '-InstallerIdentitySafety',
+    'trusted-user'
+  )
+
+  [Console]::Out.WriteLine('Direct legacy recovery diagnostic starting...')
+  $output = @(& $windowsPowerShell @arguments 2>&1)
+  $exitCode = $LASTEXITCODE
+  foreach ($line in $output) {
+    [Console]::Out.WriteLine([string]$line)
+  }
+  if ($exitCode -ne 0) {
+    throw "Direct legacy recovery diagnostic failed with exit code $exitCode."
+  }
+  [Console]::Out.WriteLine('Direct legacy recovery diagnostic completed successfully.')
+}
+
 try {
   New-Item -ItemType Directory -Path $appData, $localAppData, $userProfile -Force | Out-Null
   $env:APPDATA = $appData
@@ -69,6 +106,7 @@ try {
     throw "Fresh install did not create the application executable: $appExe"
   }
 
+  Invoke-LegacyRecoveryDiagnostic
   Invoke-CheckedProcess -FilePath $installer -Stage 'Default-mode reinstall' -Arguments @('--updated', '/S', '/currentuser', "/D=$installDir")
   if (-not (Test-Path -LiteralPath $appExe -PathType Leaf)) {
     throw "Reinstall removed the application executable: $appExe"
