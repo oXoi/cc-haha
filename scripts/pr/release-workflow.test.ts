@@ -549,9 +549,13 @@ describe('release desktop workflow', () => {
       expect(workflow).toContain('windows-installer-smoke.ps1')
     }
 
-    expect(installerSmoke).toContain('Invoke-CheckedInstaller')
+    expect(installerSmoke).toContain('Invoke-CheckedProcess')
     expect(installerSmoke).toContain("@('/S', '/currentuser'")
     expect(installerSmoke).toContain("@('--updated', '/S', '/currentuser'")
+    expect(installerSmoke).toContain('$process.WaitForExit($TimeoutSeconds * 1000)')
+    expect(installerSmoke).not.toContain('-Wait -PassThru')
+    expect(installerSmoke).toContain('$Stage starting...')
+    expect(installerSmoke).toContain('$Stage completed successfully.')
     expect(installerSmoke).toContain('Fresh install did not create the application executable')
     expect(installerSmoke).toContain('Reinstall removed the application executable')
   })

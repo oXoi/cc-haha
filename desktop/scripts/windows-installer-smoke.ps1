@@ -32,15 +32,27 @@ foreach ($name in @('APPDATA', 'LOCALAPPDATA', 'USERPROFILE', 'CLAUDE_CONFIG_DIR
   $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 
-function Invoke-CheckedInstaller {
+function Invoke-CheckedProcess {
   param(
+    [Parameter(Mandatory = $true)][string]$FilePath,
     [Parameter(Mandatory = $true)][string]$Stage,
-    [Parameter(Mandatory = $true)][string[]]$Arguments
+    [Parameter(Mandatory = $true)][string[]]$Arguments,
+    [int]$TimeoutSeconds = 180
   )
 
-  $process = Start-Process -FilePath $installer -ArgumentList $Arguments -Wait -PassThru
-  if ($process.ExitCode -ne 0) {
-    throw "$Stage failed with installer exit code $($process.ExitCode)."
+  [Console]::Out.WriteLine("$Stage starting...")
+  $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -PassThru
+  try {
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+      Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+      throw "$Stage timed out after $TimeoutSeconds seconds."
+    }
+    if ($process.ExitCode -ne 0) {
+      throw "$Stage failed with process exit code $($process.ExitCode)."
+    }
+    [Console]::Out.WriteLine("$Stage completed successfully.")
+  } finally {
+    $process.Dispose()
   }
 }
 
@@ -52,12 +64,12 @@ try {
   Remove-Item Env:CLAUDE_CONFIG_DIR -ErrorAction SilentlyContinue
   Remove-Item Env:CC_HAHA_APP_PORTABLE_DIR -ErrorAction SilentlyContinue
 
-  Invoke-CheckedInstaller -Stage 'Fresh install' -Arguments @('/S', '/currentuser', "/D=$installDir")
+  Invoke-CheckedProcess -FilePath $installer -Stage 'Fresh install' -Arguments @('/S', '/currentuser', "/D=$installDir")
   if (-not (Test-Path -LiteralPath $appExe -PathType Leaf)) {
     throw "Fresh install did not create the application executable: $appExe"
   }
 
-  Invoke-CheckedInstaller -Stage 'Default-mode reinstall' -Arguments @('--updated', '/S', '/currentuser', "/D=$installDir")
+  Invoke-CheckedProcess -FilePath $installer -Stage 'Default-mode reinstall' -Arguments @('--updated', '/S', '/currentuser', "/D=$installDir")
   if (-not (Test-Path -LiteralPath $appExe -PathType Leaf)) {
     throw "Reinstall removed the application executable: $appExe"
   }
@@ -65,7 +77,7 @@ try {
   [Console]::Out.WriteLine('Windows installer fresh-install and default-mode reinstall smoke passed.')
 } finally {
   if (Test-Path -LiteralPath $uninstaller -PathType Leaf) {
-    Start-Process -FilePath $uninstaller -ArgumentList @('/S', '/KEEP_APP_DATA', '/currentuser') -Wait | Out-Null
+    Invoke-CheckedProcess -FilePath $uninstaller -Stage 'Cleanup uninstall' -Arguments @('/S', '/KEEP_APP_DATA', '/currentuser') -TimeoutSeconds 120
   }
   foreach ($name in $savedEnvironment.Keys) {
     $value = $savedEnvironment[$name]
