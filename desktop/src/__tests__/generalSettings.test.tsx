@@ -40,9 +40,7 @@ const providerStoreState = {
   hasLoadedProviders: true,
   presets: [] as ProviderPreset[],
   isLoading: false,
-  isPresetsLoading: false,
   fetchProviders: vi.fn(),
-  fetchPresets: vi.fn(),
   deleteProvider: MOCK_DELETE_PROVIDER,
   activateProvider: vi.fn(),
   activateOfficial: vi.fn(),
@@ -199,9 +197,7 @@ describe('Settings > General tab', () => {
     providerStoreState.hasLoadedProviders = true
     providerStoreState.presets = []
     providerStoreState.isLoading = false
-    providerStoreState.isPresetsLoading = false
     providerStoreState.fetchProviders = vi.fn()
-    providerStoreState.fetchPresets = vi.fn()
     providerStoreState.activateProvider = vi.fn()
     providerStoreState.activateOfficial = vi.fn()
     providerStoreState.testProvider = vi.fn()
@@ -1685,6 +1681,21 @@ describe('Settings > Providers tab', () => {
     })
 
     expect(MOCK_DELETE_PROVIDER).toHaveBeenCalledWith('provider-1')
+  })
+
+  it('keeps custom provider creation available when presets are unavailable', () => {
+    providerStoreState.presets = []
+
+    render(<Settings />)
+
+    const addButton = screen.getByRole('button', { name: /Add Provider/i })
+    expect(addButton).toBeEnabled()
+
+    fireEvent.click(addButton)
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByLabelText(/Name/i)).toHaveValue('Custom')
+    expect(within(dialog).getByLabelText(/Base URL/i)).toBeEnabled()
   })
 
   it('uses the shared dropdown for API format in the provider form', () => {

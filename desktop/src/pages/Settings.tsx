@@ -361,9 +361,7 @@ function ProviderSettings() {
     hasLoadedProviders,
     presets,
     isLoading,
-    isPresetsLoading,
     fetchProviders,
-    fetchPresets,
     deleteProvider,
     reorderProviders,
     activateProvider,
@@ -388,8 +386,7 @@ function ProviderSettings() {
 
   useEffect(() => {
     void fetchProviders()
-    void fetchPresets()
-  }, [fetchPresets, fetchProviders])
+  }, [fetchProviders])
 
   const presetMap = useMemo(
     () => new Map(presets.map((preset) => [preset.id, preset])),
@@ -462,7 +459,7 @@ function ProviderSettings() {
           <h2 className="text-base font-semibold text-[var(--color-text-primary)]">{t('settings.providers.title')}</h2>
           <p className="text-sm text-[var(--color-text-tertiary)] mt-0.5">{t('settings.providers.description')}</p>
         </div>
-        <Button size="sm" onClick={() => setShowCreateModal(true)} disabled={isPresetsLoading || presets.length === 0}>
+        <Button size="sm" onClick={() => setShowCreateModal(true)}>
           <span className="material-symbols-outlined text-[16px]">add</span>
           {t('settings.providers.addProvider')}
         </Button>
@@ -1211,21 +1208,18 @@ function ProviderFormModal({ open, onClose, mode, provider, presets }: ProviderF
   const fetchSettings = useSettingsStore((s) => s.fetchAll)
   const t = useTranslation()
 
-  const availablePresets = presets.filter((p) => p.id !== 'official')
+  const fallbackPreset = buildFallbackPreset(provider)
+  const loadedPresets = presets.filter((p) => p.id !== 'official')
+  const availablePresets = loadedPresets.length > 0 ? loadedPresets : [fallbackPreset]
   const regularPresets = availablePresets.filter((p) => !p.featured)
   const featuredPresets = availablePresets.filter((p) => p.featured)
   const presetDefaultEnvKeys = useMemo(
     () => presets.flatMap((preset) => Object.keys(preset.defaultEnv ?? {})),
     [presets],
   )
-  const fallbackPreset = provider
-    ? buildFallbackPreset(provider)
-    : requirePreset(availablePresets[availablePresets.length - 1])
-  const initialPreset = requirePreset(
-    provider
-      ? availablePresets.find((p) => p.id === provider.presetId) ?? fallbackPreset
-      : availablePresets[0] ?? fallbackPreset,
-  )
+  const initialPreset = provider
+    ? availablePresets.find((p) => p.id === provider.presetId) ?? fallbackPreset
+    : availablePresets[0] ?? fallbackPreset
   const initialModels = stripModel1mMarkers(provider?.models ?? initialPreset.defaultModels)
   const initialModel1mSupport = getInitialModel1mSupport(
     provider?.models ?? initialPreset.defaultModels,
