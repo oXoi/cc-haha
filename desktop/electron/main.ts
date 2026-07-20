@@ -8,7 +8,7 @@ import {
   validateElectronIpcPayload,
 } from './ipc/capabilities'
 import { ElectronServerRuntime } from './services/serverRuntime'
-import { electronHostDiagnosticsFile, sanitizeHostDiagnostic } from './services/sidecarManager'
+import { appendHostDiagnostic, electronHostDiagnosticsFile, sanitizeHostDiagnostic } from './services/sidecarManager'
 import { openDialog, saveDialog } from './services/dialogs'
 import { openExternalUrl, openSystemPath, openSystemSettingsUrl } from './services/shell'
 import {
@@ -41,6 +41,7 @@ import { installPreviewCleanupOnRendererNavigation } from './services/previewLif
 import { logNotificationSmokeRendererAck, scheduleNotificationSmoke } from './services/notificationSmoke'
 import { normalizeZoomFactor } from './services/zoom'
 import { resolveRendererEntry } from './services/rendererEntry'
+import { installRendererLifecycle } from './services/rendererLifecycle'
 import { writeWindowSmokeSnapshot } from './services/windowSmoke'
 import { loadAndRevealMainWindow } from './services/windowStartup'
 import {
@@ -542,17 +543,34 @@ async function createMainWindow() {
     shouldQuit: () => isQuitting,
   })
 
-  mainWindow.on('resize', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return
-    mainWindow.webContents.send(ELECTRON_EVENT_CHANNELS.windowResized)
-  })
-  mainWindow.webContents.on('did-finish-load', () => {
-    writeWindowSmokeSnapshot(mainWindow, 'did-finish-load')
-  })
-  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
-    writeWindowSmokeSnapshot(mainWindow, `did-fail-load:${errorCode}:${errorDescription}:${validatedURL}`)
-  })
+  const window = mainWindow
+  const diagnosticsFile = electronHostDiagnosticsFile(process.env)
+  const recordRendererDiagnostic = (detail: string) => {
+    const sanitized = sanitizeHostDiagnostic(detail)
+    appendHostDiagnostic(diagnosticsFile, `[renderer] ${sanitized}`)
+    return sanitized
+  }
 
+  window.on('resize', () => {
+    if (window.isDestroyed()) return
+    window.webContents.send(ELECTRON_EVENT_CHANNELS.windowResized)
+  })
+  installRendererLifecycle({
+    window,
+    isQuitting: () => isQuitting,
+    recordDiagnostic: recordRendererDiagnostic,
+    writeSnapshot: reason => writeWindowSmokeSnapshot(window, reason),
+    onRendererProcessGone: detail => {
+      console.error(`[desktop] Electron renderer process exited: ${detail}`)
+    },
+    onRecoveryExhausted: detail => {
+      console.error(`[desktop] Electron renderer recovery exhausted: ${detail}`)
+      dialog.showErrorBox(
+        '界面恢复失败 / Interface Recovery Failed',
+        `桌面界面意外退出或持续无响应，自动恢复未能解决问题。请重启应用；如果问题持续存在，请附上诊断日志反馈。\n\nThe desktop interface exited unexpectedly or remained unresponsive, and automatic recovery did not resolve it. Restart the app and include diagnostics when reporting the problem.\n\n${detail}`,
+      )
+    },
+  })
   writeWindowSmokeSnapshot(mainWindow, 'after-create')
 
   await loadAndRevealMainWindow({

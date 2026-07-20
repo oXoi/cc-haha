@@ -49,12 +49,20 @@ describe('WsBridge', () => {
     expect(bridge.sendStopGeneration('chat-stop')).toBe(false)
   })
 
-  it('destroy cleans up all sessions', () => {
+  it('destroy cleans up all sessions without leaking connecting-socket errors', async () => {
     bridge.connectSession('a', 'uuid-a')
     bridge.connectSession('b', 'uuid-b')
+    const sockets = [...(bridge as any).sessions.values()]
+      .map((session: any) => session.ws)
     bridge.destroy()
     expect(bridge.hasSession('a')).toBe(false)
     expect(bridge.hasSession('b')).toBe(false)
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    for (const ws of sockets) {
+      expect(ws.listenerCount('error')).toBe(0)
+      expect(ws.listenerCount('close')).toBe(0)
+    }
   })
 })
 
@@ -225,6 +233,13 @@ describe('WsBridge: handler serialization', () => {
     bridge.resetSession('chat-reset')
     expect(bridge.hasSession('chat-reset')).toBe(false)
     expect(staleSession.ws.listenerCount('message')).toBe(0)
+    await new Promise<void>((resolve) => {
+      if (staleSession.ws.readyState === staleSession.ws.CLOSED) {
+        resolve()
+        return
+      }
+      staleSession.ws.once('close', () => resolve())
+    })
     expect(staleSession.ws.listenerCount('close')).toBe(0)
     expect(staleSession.ws.listenerCount('error')).toBe(0)
 
