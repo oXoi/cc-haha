@@ -461,6 +461,12 @@ function registerIpcHandlers() {
       payload as Electron.Rectangle[],
     )
   })
+  registerHandler(ELECTRON_IPC_CHANNELS.petsFocusMainWindow, (event) => {
+    if (!getPetWindowController().owns(currentWindow(event))) {
+      throw new Error('Pet window IPC sender does not own the companion window')
+    }
+    showMainWindow(mainWindow, app)
+  })
   registerHandler(ELECTRON_IPC_CHANNELS.petsFocusSession, (_event, payload) =>
     focusPetSession(String(payload)))
   registerHandler(ELECTRON_IPC_CHANNELS.dialogOpen, (event, payload) =>

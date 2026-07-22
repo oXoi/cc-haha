@@ -161,6 +161,16 @@ describe('Electron pet window service', () => {
     )
   })
 
+  it('lets only the owned pet window focus the main desktop window', () => {
+    expect(mainSource).toContain(
+      'registerHandler(ELECTRON_IPC_CHANNELS.petsFocusMainWindow, (event)',
+    )
+    expect(mainSource).toContain(
+      'if (!getPetWindowController().owns(currentWindow(event)))',
+    )
+    expect(mainSource).toContain('showMainWindow(mainWindow, app)')
+  })
+
   it('routes the native context menu through the sender-owned pet controller', () => {
     expect(mainSource).toContain(
       'registerHandler(ELECTRON_IPC_CHANNELS.petsShowContextMenu, (event, payload)',
@@ -287,6 +297,72 @@ describe('Electron pet window service', () => {
       x: 800 - PET_WINDOW_WIDTH,
       y: 25 + 575 - PET_WINDOW_HEIGHT,
     })
+  })
+
+  it.each([
+    ['left', { x: -100, y: 220 }, { x: -136, y: 160 }],
+    ['right', { x: 1_000, y: 220 }, { x: 552, y: 160 }],
+  ] as const)(
+    'lets the mascot reach the %s display edge through transparent window padding',
+    async (_edge, pointerEnd, expectedPosition) => {
+      const petWindow = createFakeWindow({
+        x: 100,
+        y: 120,
+        width: PET_WINDOW_WIDTH,
+        height: PET_WINDOW_HEIGHT,
+      })
+      const controller = new PetWindowController({
+        createWindow: vi.fn(() => petWindow) as never,
+        getCurrentWorkArea: () => ({ x: 0, y: 25, width: 800, height: 575 }),
+        getWorkAreaForPoint: () => ({ x: 0, y: 25, width: 800, height: 575 }),
+        load: vi.fn().mockResolvedValue(undefined),
+        platform: 'darwin',
+        preloadPath: '/app/electron-dist/preload.cjs',
+      })
+      await controller.show()
+      controller.setInteractiveRegions(petWindow as never, [
+        { x: 136, y: 240, width: 112, height: 128 },
+      ])
+
+      controller.dragWindow(petWindow as never, { phase: 'start', x: 150, y: 180 })
+      controller.dragWindow(petWindow as never, { phase: 'end', ...pointerEnd })
+
+      expect(petWindow.setPosition).toHaveBeenLastCalledWith(
+        expectedPosition.x,
+        expectedPosition.y,
+        false,
+      )
+    },
+  )
+
+  it('restores an edge position after the renderer reports the visible mascot region', async () => {
+    let petWindow: ReturnType<typeof createFakeWindow> | undefined
+    const createWindow = vi.fn((bounds) => {
+      petWindow = createFakeWindow(bounds as {
+        x: number
+        y: number
+        width: number
+        height: number
+      })
+      return petWindow
+    })
+    const controller = new PetWindowController({
+      createWindow: createWindow as never,
+      getCurrentWorkArea: () => ({ x: 0, y: 25, width: 800, height: 575 }),
+      getWorkAreaForPoint: () => ({ x: 0, y: 25, width: 800, height: 575 }),
+      load: vi.fn().mockResolvedValue(undefined),
+      platform: 'darwin',
+      preloadPath: '/app/electron-dist/preload.cjs',
+      readPosition: () => ({ x: -136, y: 160 }),
+    })
+
+    await controller.show()
+    expect(createWindow).toHaveBeenCalledWith(expect.objectContaining({ x: 0, y: 160 }))
+    controller.setInteractiveRegions(petWindow as never, [
+      { x: 136, y: 240, width: 112, height: 128 },
+    ])
+
+    expect(petWindow?.setPosition).toHaveBeenLastCalledWith(-136, 160, false)
   })
 
   it('tracks the native cursor at 60 Hz without renderer move payloads', async () => {

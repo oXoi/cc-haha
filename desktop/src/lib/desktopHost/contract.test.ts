@@ -48,6 +48,7 @@ describe('desktop host contract', () => {
     await expect(browserHost.pets.dragWindow({ phase: 'start', x: 100, y: 100 })).rejects.toThrow('desktop app runtime')
     await expect(browserHost.pets.setIgnoreMouseEvents(true)).rejects.toThrow('desktop app runtime')
     await expect(browserHost.pets.setInteractiveRegions([{ x: 0, y: 0, width: 10, height: 10 }])).rejects.toThrow('desktop app runtime')
+    await expect(browserHost.pets.focusMainWindow()).rejects.toThrow('desktop app runtime')
     await expect(browserHost.pets.focusSession('session-1')).rejects.toThrow('desktop app runtime')
     await expect(browserHost.pets.onNavigateSession(vi.fn())).resolves.toEqual(expect.any(Function))
   })

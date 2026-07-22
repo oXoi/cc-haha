@@ -151,6 +151,7 @@ export const ELECTRON_IPC_VALIDATORS = {
   [ELECTRON_IPC_CHANNELS.petsDragWindow]: petWindowDrag,
   [ELECTRON_IPC_CHANNELS.petsSetIgnoreMouseEvents]: booleanPayload,
   [ELECTRON_IPC_CHANNELS.petsSetInteractiveRegions]: petInteractiveRegions,
+  [ELECTRON_IPC_CHANNELS.petsFocusMainWindow]: noPayload,
   [ELECTRON_IPC_CHANNELS.petsFocusSession]: sessionIdPayload,
   [ELECTRON_IPC_CHANNELS.dialogOpen]: optionalRecord,
   [ELECTRON_IPC_CHANNELS.dialogSave]: optionalRecord,
@@ -205,6 +206,7 @@ const petWindowChannels = new Set<ElectronIpcChannel>([
   ELECTRON_IPC_CHANNELS.petsDragWindow,
   ELECTRON_IPC_CHANNELS.petsSetIgnoreMouseEvents,
   ELECTRON_IPC_CHANNELS.petsSetInteractiveRegions,
+  ELECTRON_IPC_CHANNELS.petsFocusMainWindow,
   ELECTRON_IPC_CHANNELS.petsFocusSession,
 ])
 

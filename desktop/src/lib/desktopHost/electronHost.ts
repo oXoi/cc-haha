@@ -114,6 +114,7 @@ export function createElectronHost(bridge: ElectronHostBridge): DesktopHost {
       dragWindow: payload => invoke(ELECTRON_IPC_CHANNELS.petsDragWindow, payload),
       setIgnoreMouseEvents: ignore => invoke(ELECTRON_IPC_CHANNELS.petsSetIgnoreMouseEvents, ignore),
       setInteractiveRegions: regions => invoke(ELECTRON_IPC_CHANNELS.petsSetInteractiveRegions, regions),
+      focusMainWindow: () => invoke(ELECTRON_IPC_CHANNELS.petsFocusMainWindow),
       focusSession: sessionId => invoke(ELECTRON_IPC_CHANNELS.petsFocusSession, sessionId),
       onNavigateSession: handler => subscribe(ELECTRON_EVENT_CHANNELS.petNavigateSession, handler),
       onVisibilityChanged: handler => subscribe(ELECTRON_EVENT_CHANNELS.petVisibilityChanged, handler),

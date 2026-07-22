@@ -494,6 +494,7 @@ export function PetApp() {
                 }
                 return
               }
+              void getDesktopHost().pets.focusMainWindow().catch(() => undefined)
               playTransient('waving')
             }}
             onContextMenu={(event) => {

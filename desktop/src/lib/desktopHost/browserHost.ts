@@ -134,6 +134,9 @@ export const browserHost: DesktopHost = {
     async setInteractiveRegions() {
       unsupported('Changing companion pet interaction regions')
     },
+    async focusMainWindow() {
+      unsupported('Focusing the main desktop window')
+    },
     async focusSession() {
       unsupported('Focusing a pet session')
     },

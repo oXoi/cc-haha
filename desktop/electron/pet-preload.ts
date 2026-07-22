@@ -48,6 +48,7 @@ const petHost = {
       invoke<void>(ELECTRON_IPC_CHANNELS.petsSetIgnoreMouseEvents, ignore),
     setInteractiveRegions: (regions: Array<{ x: number, y: number, width: number, height: number }>) =>
       invoke<void>(ELECTRON_IPC_CHANNELS.petsSetInteractiveRegions, regions),
+    focusMainWindow: () => invoke<void>(ELECTRON_IPC_CHANNELS.petsFocusMainWindow),
     focusSession: (sessionId: string) =>
       invoke<void>(ELECTRON_IPC_CHANNELS.petsFocusSession, sessionId),
   },

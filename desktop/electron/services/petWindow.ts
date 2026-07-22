@@ -118,13 +118,29 @@ export function writePetWindowPosition(
 export function clampPetWindowPosition(
   position: PetWindowPosition,
   workArea: Rectangle,
+  visibleRegion: Rectangle = {
+    x: 0,
+    y: 0,
+    width: PET_WINDOW_WIDTH,
+    height: PET_WINDOW_HEIGHT,
+  },
 ): PetWindowPosition {
-  const maxX = workArea.x + Math.max(0, workArea.width - PET_WINDOW_WIDTH)
-  const maxY = workArea.y + Math.max(0, workArea.height - PET_WINDOW_HEIGHT)
+  const minX = workArea.x - visibleRegion.x
+  const minY = workArea.y - visibleRegion.y
+  const maxX = minX + Math.max(0, workArea.width - visibleRegion.width)
+  const maxY = minY + Math.max(0, workArea.height - visibleRegion.height)
   return {
-    x: Math.min(Math.max(Math.round(position.x), workArea.x), maxX),
-    y: Math.min(Math.max(Math.round(position.y), workArea.y), maxY),
+    x: Math.min(Math.max(Math.round(position.x), minX), maxX),
+    y: Math.min(Math.max(Math.round(position.y), minY), maxY),
   }
+}
+
+function normalizePetWindowRegion(region: Rectangle): Rectangle {
+  const x = Math.max(0, Math.min(PET_WINDOW_WIDTH - 1, Math.round(region.x)))
+  const y = Math.max(0, Math.min(PET_WINDOW_HEIGHT - 1, Math.round(region.y)))
+  const right = Math.max(x + 1, Math.min(PET_WINDOW_WIDTH, Math.round(region.x + region.width)))
+  const bottom = Math.max(y + 1, Math.min(PET_WINDOW_HEIGHT, Math.round(region.y + region.height)))
+  return { x, y, width: right - x, height: bottom - y }
 }
 
 export function getPetWindowBounds(
@@ -221,6 +237,8 @@ export class PetWindowController {
     lastPosition: PetWindowPosition
   } | null = null
   private dragTimer: ReturnType<typeof setInterval> | null = null
+  private visibleDragRegion: Rectangle | null = null
+  private pendingRestoredPosition: PetWindowPosition | null = null
   private readonly options: PetWindowControllerOptions
 
   constructor(options: PetWindowControllerOptions) {
@@ -229,6 +247,8 @@ export class PetWindowController {
 
   private async create(): Promise<PetWindow> {
     const restoredPosition = this.options.readPosition?.() ?? null
+    this.visibleDragRegion = null
+    this.pendingRestoredPosition = restoredPosition
     const currentWorkArea = restoredPosition && this.options.getWorkAreaForPoint
       ? this.options.getWorkAreaForPoint({
           x: restoredPosition.x + Math.floor(PET_WINDOW_WIDTH / 2),
@@ -243,7 +263,11 @@ export class PetWindowController {
     this.window = window
     window.on('closed', () => {
       this.finishDrag(window)
-      if (this.window === window) this.window = null
+      if (this.window === window) {
+        this.window = null
+        this.visibleDragRegion = null
+        this.pendingRestoredPosition = null
+      }
     })
 
     try {
@@ -253,7 +277,11 @@ export class PetWindowController {
       return window
     } catch (error) {
       if (!window.isDestroyed()) window.destroy()
-      if (this.window === window) this.window = null
+      if (this.window === window) {
+        this.window = null
+        this.visibleDragRegion = null
+        this.pendingRestoredPosition = null
+      }
       throw error
     }
   }
@@ -296,6 +324,8 @@ export class PetWindowController {
     }
     window.destroy()
     this.window = null
+    this.visibleDragRegion = null
+    this.pendingRestoredPosition = null
   }
 
   owns(window: PetWindow | null): boolean {
@@ -314,7 +344,30 @@ export class PetWindowController {
     if (!this.owns(window)) {
       throw new Error('Pet window IPC sender does not own the companion window')
     }
-    if ((this.options.platform ?? process.platform) === 'darwin') return
+    const platform = this.options.platform ?? process.platform
+    const primaryRegion = regions[0]
+    if (platform === 'darwin' && primaryRegion) {
+      this.visibleDragRegion = normalizePetWindowRegion(primaryRegion)
+      const requestedPosition = this.pendingRestoredPosition ?? window.getBounds()
+      this.pendingRestoredPosition = null
+      const anchor = {
+        x: requestedPosition.x + this.visibleDragRegion.x + Math.floor(this.visibleDragRegion.width / 2),
+        y: requestedPosition.y + this.visibleDragRegion.y + Math.floor(this.visibleDragRegion.height / 2),
+      }
+      const workArea = this.options.getWorkAreaForPoint?.(anchor)
+        ?? this.options.getCurrentWorkArea()
+      const nextPosition = clampPetWindowPosition(
+        requestedPosition,
+        workArea,
+        this.visibleDragRegion,
+      )
+      const bounds = window.getBounds()
+      if (nextPosition.x !== bounds.x || nextPosition.y !== bounds.y) {
+        window.setPosition(nextPosition.x, nextPosition.y, false)
+      }
+    }
+
+    if (platform === 'darwin') return
 
     const shape = regions.flatMap((region) => {
       const requestedLeft = Math.round(region.x) - PET_WINDOW_SHAPE_PADDING
@@ -400,7 +453,11 @@ export class PetWindowController {
     }
     const workArea = this.options.getWorkAreaForPoint?.(pointer)
       ?? this.options.getCurrentWorkArea()
-    const nextPosition = clampPetWindowPosition(requestedPosition, workArea)
+    const nextPosition = clampPetWindowPosition(
+      requestedPosition,
+      workArea,
+      this.visibleDragRegion ?? undefined,
+    )
     if (
       nextPosition.x === drag.lastPosition.x
       && nextPosition.y === drag.lastPosition.y

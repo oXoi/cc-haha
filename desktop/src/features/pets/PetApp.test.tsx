@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   updatePetPreferences: vi.fn(),
   initializeDesktopServerUrl: vi.fn(),
   focusSession: vi.fn(),
+  focusMainWindow: vi.fn(),
   hidePet: vi.fn(),
   showContextMenu: vi.fn(),
   dragWindow: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock('../../lib/desktopHost', () => ({
     pets: {
       list: vi.fn(async () => ({ pets: [], errors: [] })),
       focusSession: mocks.focusSession,
+      focusMainWindow: mocks.focusMainWindow,
       hide: mocks.hidePet,
       showContextMenu: mocks.showContextMenu,
       dragWindow: mocks.dragWindow,
@@ -143,6 +145,7 @@ describe('PetApp', () => {
     mocks.fetchSessions.mockResolvedValue(undefined)
     mocks.showContextMenu.mockResolvedValue(true)
     mocks.dragWindow.mockResolvedValue(undefined)
+    mocks.focusMainWindow.mockResolvedValue(undefined)
     mocks.getChatStatus.mockImplementation(async (sessionId: string) => ({
       state: sessionId === 'session-running' ? 'thinking' : 'idle',
       activityState: sessionId === 'session-running' ? 'running' : 'idle',
@@ -304,7 +307,7 @@ describe('PetApp', () => {
     })
   })
 
-  it('keeps a short mascot pointer gesture as a normal pet interaction', async () => {
+  it('focuses the main desktop window after a short mascot pointer gesture', async () => {
     render(<PetApp />)
     const mascot = await screen.findByRole('button', { name: 'pet.window.interact' })
     mascot.setPointerCapture = vi.fn()
@@ -335,6 +338,7 @@ describe('PetApp', () => {
     fireEvent.click(mascot)
 
     expect(mocks.dragWindow).not.toHaveBeenCalled()
+    expect(mocks.focusMainWindow).toHaveBeenCalledTimes(1)
     expect(mocks.updatePetPreferences).not.toHaveBeenCalledWith({ collapsed: true })
     expect(mascot.querySelector('[data-pet-state="waving"]')).toBeInTheDocument()
     expect(mascot.setPointerCapture).toHaveBeenCalledWith(7)
@@ -388,6 +392,7 @@ describe('PetApp', () => {
       [{ phase: 'end', x: 530, y: 440 }],
     ]))
     expect(mascot).toHaveAttribute('data-dragging', 'false')
+    expect(mocks.focusMainWindow).not.toHaveBeenCalled()
     expect(mocks.updatePetPreferences).not.toHaveBeenCalledWith({ collapsed: true })
     expect(mascot.setPointerCapture).toHaveBeenCalledWith(9)
     expect(mascot.releasePointerCapture).toHaveBeenCalledWith(9)

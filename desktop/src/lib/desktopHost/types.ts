@@ -236,6 +236,7 @@ export type DesktopHost = {
     dragWindow(payload: DesktopPetWindowDrag): Promise<void>
     setIgnoreMouseEvents(ignore: boolean): Promise<void>
     setInteractiveRegions(regions: DesktopPetInteractiveRegion[]): Promise<void>
+    focusMainWindow(): Promise<void>
     focusSession(sessionId: string): Promise<void>
     onNavigateSession(handler: (sessionId: string) => void): Promise<DesktopHostUnlisten>
     onVisibilityChanged(handler: (visible: boolean) => void): Promise<DesktopHostUnlisten>

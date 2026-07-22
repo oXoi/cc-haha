@@ -115,6 +115,8 @@ describe('Electron IPC capabilities', () => {
     expect(validateElectronIpcPayload(ELECTRON_IPC_CHANNELS.petsSetInteractiveRegions, [
       { x: -1, y: 0, width: 20, height: 20 },
     ])).toBe(false)
+    expect(validateElectronIpcPayload(ELECTRON_IPC_CHANNELS.petsFocusMainWindow, undefined)).toBe(true)
+    expect(validateElectronIpcPayload(ELECTRON_IPC_CHANNELS.petsFocusMainWindow, {})).toBe(false)
     expect(validateElectronIpcPayload(ELECTRON_IPC_CHANNELS.petsFocusSession, 'session-123')).toBe(true)
     expect(validateElectronIpcPayload(ELECTRON_IPC_CHANNELS.petsFocusSession, '../escape')).toBe(false)
   })
@@ -138,6 +140,9 @@ describe('Electron IPC capabilities', () => {
       ELECTRON_IPC_CHANNELS.petsDragWindow,
     )).toBe(true)
     expect(isElectronIpcChannelAllowedForPetWindow(ELECTRON_IPC_CHANNELS.petsFocusSession)).toBe(true)
+    expect(isElectronIpcChannelAllowedForPetWindow(
+      ELECTRON_IPC_CHANNELS.petsFocusMainWindow,
+    )).toBe(true)
 
     for (const forbidden of [
       ELECTRON_IPC_CHANNELS.commandInvoke,

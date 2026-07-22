@@ -19,6 +19,7 @@ export const ELECTRON_IPC_CHANNELS = {
   petsDragWindow: 'desktop:pets:drag-window',
   petsSetIgnoreMouseEvents: 'desktop:pets:set-ignore-mouse-events',
   petsSetInteractiveRegions: 'desktop:pets:set-interactive-regions',
+  petsFocusMainWindow: 'desktop:pets:focus-main-window',
   petsFocusSession: 'desktop:pets:focus-session',
   dialogOpen: 'desktop:dialog:open',
   dialogSave: 'desktop:dialog:save',
